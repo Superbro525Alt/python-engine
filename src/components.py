@@ -1,8 +1,11 @@
 from collections import namedtuple
 from threading import current_thread
-from typing import List, Optional, Type
+from typing import List, Match, Optional, Type
 
 import sys
+
+import pygame
+from camera import Camera2d
 import event
 from sprite import Sprite
 import utils
@@ -11,16 +14,6 @@ from base import BaseComponent
 from dataclasses import dataclass
 
 import math
-
-@dataclass
-class Position:
-    x: float
-    y: float
-    z: float
-    rot: float
-
-    def __post_init__(self) -> None:
-        self.rot = self.rot % 360
 
 @dataclass
 class Velocity:
@@ -203,7 +196,7 @@ class Controls(BaseComponent):
             velcontrol.SetVelocity(Velocity(0, 0))
 
 class Transform(BaseComponent):
-    def __init__(self, initial_pos: Position = Position(0, 0, 0, 0)):
+    def __init__(self, initial_pos: utils.Position2d = utils.Position2d(0, 0, utils.Rotation2d(0))):
         super().__init__(self._tick)
         
         self.pos = initial_pos
@@ -211,27 +204,38 @@ class Transform(BaseComponent):
     def _tick(self, entity: GameObject, events: List[event.Event]) -> None:
         pass
     
-    def SetPosition(self, new_pos: Position):
+    def SetPosition(self, new_pos: utils.Position2d):
         self.pos = new_pos
 
-    def AddPosition(self, pos: Position):
+    def AddPosition(self, pos: utils.Position2d):
         self.pos.x += pos.x
         self.pos.y += pos.y
-        self.pos.z += pos.z
         self.pos.rot += pos.rot
 
         self.pos.__post_init__()
+
+    def GetPos(self):
+        return self.pos
 
 class Model(BaseComponent):
     def __init__(self, obj: GameObject, sprite: Sprite = Sprite()):
         super().__init__(self._tick)
 
-        RequireComponent(obj, Transform, Transform(Position(0, 0, 0, 0)))
-        
+        RequireComponent(obj, Transform, Transform())
+       
         self.sprite: Sprite = sprite
+
+        t: BaseComponent | None = obj.GetComponent(Transform)
+        
+        if t is not None and isinstance(t, Transform):
+            self.transform: Transform = t
 
     def _tick(self, entity: GameObject, events: List[event.Event]) -> None:
         pass
+
+    def Render(self, screen: pygame.surface.Surface, camera: Camera2d):
+        if (camera.IsVisible(self.transform.GetPos())):
+            self.sprite.Display(screen) 
 
 def RequireComponent(obj: GameObject, component: Type[BaseComponent], to_add: BaseComponent | None = None) -> bool:
     """
@@ -260,5 +264,3 @@ def MatchComponent(c1: BaseComponent, c2: Type[BaseComponent | None]) -> bool:
         True if c1 is an instance of c2 or a subclass of c2, False otherwise.
     """
     return isinstance(c1, c2)
-
-

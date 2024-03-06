@@ -115,7 +115,7 @@ class InputManager:
             try:
                 for i in range(self.events.count(Keydown(1, event.char))):
                     self.events.remove(Keydown(1, event.char))
-            except:
+            except AttributeError:
                 for i in range(self.events.count(Keydown(1, event.name))):
                     self.events.remove(Keydown(1, event.name))
         

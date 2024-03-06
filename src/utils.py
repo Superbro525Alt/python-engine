@@ -1,5 +1,54 @@
+from dataclasses import dataclass
+import threading
 from typing import overload
 
+import pygame
+
+import time
+
+@dataclass
+class Rotation3d:
+    x: int | float
+    y: int | float
+    z: int | float
+
+@dataclass
+class Rotation2d:
+    x: int | float
+
+    def __add__(self, other):
+        if isinstance(other, Rotation2d):
+            return Rotation2d(self.x + other.x) 
+        raise Exception("You can only add 2 rotation2d's")
+
+    def __post_init__(self) -> None:
+        self.x = self.x % 360
+
+@dataclass
+class Position3d:
+    x: int | float
+    y: int | float
+    z: int | float
+
+    rot: Rotation3d
+
+@dataclass
+class Position2d:
+    x: int | float
+    y: int | float
+
+    rot: Rotation2d
+
+    def Rotate(self, other: Rotation2d):
+        self.rot.x += other.x
+    
+    def __post_init__(self):
+        self.rot.__post_init__()
+
+    def __add__(self, other):
+        if isinstance(other, Position2d):
+            return Position2d(self.x + other.x, self.y + other.y, self.rot + other.rot)
+        raise Exception("Can only add 2 Position2d's")
 
 class BaseObject:
     """
@@ -116,3 +165,19 @@ class BaseObject:
         Private constructor, should not be called directly. Use specific subclasses instead.
         """
         pass
+
+class Timer(BaseObject):
+    def __init__(self) -> None:
+        self.elapsed = 0
+
+        self.created = time.time() 
+
+    def Set(self, time):
+        self.created = time
+
+    def Reset(self):
+        self.created = time.time()
+    
+    @property
+    def Elapsed(self):
+        return time.time() - self.created
