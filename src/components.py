@@ -1,5 +1,6 @@
 from collections import namedtuple
-from threading import current_thread
+from threading import current_thread, local
+import threading
 from typing import List, Match, Optional, Type
 
 import sys
@@ -7,7 +8,9 @@ import sys
 import pygame
 from camera import Camera2d
 import event
+from logger import debug
 from sprite import Sprite
+from surface import Screen
 import utils
 from gameobject import GameObject
 from base import BaseComponent
@@ -233,9 +236,14 @@ class Model(BaseComponent):
     def _tick(self, entity: GameObject, events: List[event.Event]) -> None:
         pass
 
-    def Render(self, screen: pygame.surface.Surface, camera: Camera2d):
-        if (camera.IsVisible(self.transform.GetPos())):
-            self.sprite.Display(screen) 
+    def Render(self, screen: Screen, camera: Camera2d):
+        if (camera.IsVisible(self.transform.GetPos(), self.sprite.length)):
+            # debug(self.transform.GetPos().__str__())
+            
+            self._Render(screen, camera.GlobalToLocal(self.transform.GetPos()))
+
+    def _Render(self, screen: Screen, local_pos: utils.Position2d):
+        self.sprite.Display(screen, local_pos)
 
 def RequireComponent(obj: GameObject, component: Type[BaseComponent], to_add: BaseComponent | None = None) -> bool:
     """

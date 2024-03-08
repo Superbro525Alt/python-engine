@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 import threading
-from typing import List, Tuple
+from types import FunctionType
+from typing import Any, Callable, List, Tuple
 from base import BaseComponent
 from camera import Camera2d, ViewportSize2d
 from components import MatchComponent, Model
 from gameobject import GameObject
 from logger import debug
-from utils import BaseObject, Position2d, Rotation2d
+from surface import Screen
+from utils import BaseObject, Color, Position2d, Resolution, Rotation2d
 import pygame
 
 consts: dict[str, bool] = {"INIT": False}
@@ -17,36 +19,15 @@ def __init__():
         pygame.init()
         consts["INIT"] = True
 
-@dataclass
-class Color:
-    r: int
-    b: int
-    g: int
-
-    def rgb(self) -> Tuple[int, int, int]:
-        return (self.r, self.b, self.g)
-    
-    def string(self):
-        return f"({self.r}, {self.g}, {self.b})"
-
-@dataclass
-class Resolution:
-    width: int | float
-    height: int | float
-
-    def pygame(self):
-        return (self.width, self.height)
-
-
 class Renderer(BaseObject):
     def __init__(self, res: Resolution = Resolution(800, 600), color: Color = Color(0, 0, 0)) -> None:
-        self.screen: pygame.surface.Surface = pygame.display.set_mode(res.pygame())
+        self.screen: Screen = Screen(res)
         self.color: Color = color
 
         debug("Color is " + self.color.string())
     
     def Render(self, gameobjects: List[GameObject], camera: Camera2d):
-        self.screen.fill(self.color.rgb())
+        self.screen.fill(self.color)
 
         for g in gameobjects:
             comp: BaseComponent | None = g.GetComponent(Model)
@@ -57,10 +38,16 @@ class Renderer(BaseObject):
 
         pygame.display.update()
 
-        
-
 class Engine(BaseObject):
-    def __init__(self, renderer: Renderer | None = None, color: Color | None = None, camera: Camera2d | None = None, tpr: int | None = None, raw_tpr: float | int | None = None) -> None:
+    def __init__(
+        self,
+        renderer: Renderer | None = None,
+        color: Color | None = None,
+        camera: Camera2d | None = None,
+        tpr: int | None = None,
+        raw_tpr: float | int | None = None,
+        tick: Callable[[Any], None] | None = None
+    ) -> None:
         __init__()
         
         if color is None:
@@ -68,7 +55,7 @@ class Engine(BaseObject):
         if renderer is None:
             renderer = Renderer(color=color)
         if camera is None:
-            camera = Camera2d(ViewportSize2d(10, 10))
+            camera = Camera2d(ViewportSize2d(800, 600))
         if tpr is None:
             tpr = 1
 
@@ -81,7 +68,9 @@ class Engine(BaseObject):
         self.tpr: int = tpr * pygame.display.get_current_refresh_rate()
         self.tick: int = 0
 
-        self.raw_tpr = raw_tpr
+        self.extra_tick: Callable[[Any], None] | None = tick
+
+        self.raw_tpr: int | float | None = raw_tpr
             
     def Run(self, block=True):
         if block:
@@ -97,6 +86,9 @@ class Engine(BaseObject):
             self.renderer.Render(self.gameobjects, self.camera)
 
             self.CheckNative()
+
+            if self.extra_tick is not None:
+                self.extra_tick(self)
             
             self.tick+=1
 
@@ -105,8 +97,8 @@ class Engine(BaseObject):
             else:
                 self.clock.tick(self.tpr)
 
-    def AddObject(self, obj: GameObject):
-        self.gameobjects.append(obj)
+    def AddObject(self, obj: GameObject, layer: int = 0):
+        self.gameobjects.insert(layer, obj)
 
     def exit(self):
         debug("Cleaning Up")
@@ -118,3 +110,12 @@ class Engine(BaseObject):
                 pygame.quit()
                 self.exit()
                 exit()
+
+    @property
+    def Camera(self) -> Camera2d:
+        return self.camera
+
+    @property
+    def GameObjects(self) -> List[GameObject]:
+        return self.gameobjects
+        

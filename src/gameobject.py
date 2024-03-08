@@ -1,6 +1,7 @@
 from typing import List, Optional, Type
 from base import BaseComponent
 from event import EventManager
+from logger import error
 from utils import BaseObject
 
 
@@ -18,7 +19,10 @@ class GameObject(BaseObject):
         Returns:
             Nothing
         """
-        self.components.append(comp)
+        if self.GetComponent(type(comp)) == None:
+            self.components.append(comp)
+        else:
+            error("Cannot add same component type to one GameObject")
 
     def GetComponent(self, comp_type: Type[BaseComponent]) -> BaseComponent | None:
         """
@@ -59,7 +63,7 @@ class GameObject(BaseObject):
                 s += ", "
             s += "components=["
             for comp in self.components:
-                s += comp.__class__.__name__
+                s += comp.__str__()
                 if (self.components.index(comp) != len(self.components) - 1):
                     s += ", "
             s+= "]"

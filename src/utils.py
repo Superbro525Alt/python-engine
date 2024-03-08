@@ -1,10 +1,20 @@
 from dataclasses import dataclass
 import threading
-from typing import overload
+from typing import Any, Tuple, overload
 
 import pygame
 
 import time
+
+from copy import deepcopy
+
+@dataclass
+class Resolution:
+    width: int | float
+    height: int | float
+
+    def pygame(self):
+        return (self.width, self.height)
 
 @dataclass
 class Rotation3d:
@@ -23,6 +33,9 @@ class Rotation2d:
 
     def __post_init__(self) -> None:
         self.x = self.x % 360
+
+    def __str__(self) -> str:
+        return f"Rotation2d({self.x})"
 
 @dataclass
 class Position3d:
@@ -49,6 +62,31 @@ class Position2d:
         if isinstance(other, Position2d):
             return Position2d(self.x + other.x, self.y + other.y, self.rot + other.rot)
         raise Exception("Can only add 2 Position2d's")
+
+    def coord(self):
+        return (self.x, self.y)
+
+    def __str__(self) -> str:
+        return f"Position2d(x={self.x}, y={self.y}, rot={self.rot})"
+
+@dataclass
+class SquareSize:
+    length: int | float
+
+@dataclass
+class Color:
+    r: int
+    b: int
+    g: int
+
+    def rgb(self) -> Tuple[int, int, int]:
+        return (self.r, self.b, self.g)
+    
+    def string(self):
+        return f"({self.r}, {self.g}, {self.b})"
+
+def copy(obj: Any):
+    return deepcopy(obj)
 
 class BaseObject:
     """
